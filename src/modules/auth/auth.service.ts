@@ -2,6 +2,7 @@ import {
     Injectable,
     NotFoundException,
     UnauthorizedException,
+    ConflictException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { UsersService } from "../users/users.service";
@@ -50,6 +51,36 @@ export class AuthService {
         return {
             access_token: await this.jwtService.signAsync(payload),
             user: transformedUser,
+        }
+    }
+
+    async signUp(signupData: { firstName: string, lastName: string, email: string, password: string }): Promise<AuthResponse> {
+        try {
+            const user = await this.userService.createUser(signupData);
+            
+            const payload = {
+                sub: user.id,
+                email: user.email,
+                name: `${user.firstName} ${user.lastName}`,
+            }
+
+            const transformedUser = {
+                id: user.id,
+                first_name: user.firstName,
+                last_name: user.lastName,
+                email: user.email,
+                created_at: user.createdAt,
+            }
+
+            return {
+                access_token: await this.jwtService.signAsync(payload),
+                user: transformedUser,
+            }
+        } catch (error) {
+            if (error.message.includes('already exists')) {
+                throw new ConflictException('User with this email already exists');
+            }
+            throw error;
         }
     }
 

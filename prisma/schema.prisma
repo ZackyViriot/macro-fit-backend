@@ -20,5 +20,58 @@ model User {
   lastName String
   password String
   createdAt DateTime @default(now())
-
+  
+  // User's feature preferences
+  featurePreferences UserFeaturePreference[]
 }
+
+// Predefined groups
+model Group {
+  id Int @id @default(autoincrement())
+  name String
+  description String?
+  createdAt DateTime @default(now())
+  
+  // Features in this group
+  features Feature[]
+}
+
+// Predefined features
+model Feature {
+  id Int @id @default(autoincrement())
+  name String
+  description String?
+  
+  // Which group this feature belongs to
+  groupId Int
+  group Group @relation(fields: [groupId], references: [id])
+  
+  // Default state when user joins group
+  defaultEnabled Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  
+  // User preferences for this feature
+  userPreferences UserFeaturePreference[]
+}
+
+// User's personal feature settings
+model UserFeaturePreference {
+  id Int @id @default(autoincrement())
+  
+  userId Int
+  user User @relation(fields: [userId], references: [id])
+  
+  featureId Int
+  feature Feature @relation(fields: [featureId], references: [id])
+  
+  // User's personal setting (can override default)
+  isEnabled Boolean
+  
+  createdAt DateTime @default(now())
+  
+  // Ensure unique user-feature combinations
+  @@unique([userId, featureId])
+}
+
+
