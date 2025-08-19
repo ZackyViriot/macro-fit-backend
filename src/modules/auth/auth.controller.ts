@@ -39,6 +39,10 @@ export class AuthController {
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
   async signup(@Body() signupDto: SignupDto) {
+    console.log('Backend - Received signup data:', signupDto);
+    console.log('Backend - Email value:', signupDto.email);
+    console.log('Backend - Email type:', typeof signupDto.email);
+    console.log('Backend - Email length:', signupDto.email?.length);
     return await this.authService.signUp(signupDto);
   }
 }

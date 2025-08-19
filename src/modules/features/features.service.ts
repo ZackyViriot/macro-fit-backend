@@ -76,8 +76,39 @@ export class FeaturesService {
     });
   }
 
+  // Add this method to check survey status
+  async getSurveyStatus(userId: number) {
+    const userPreferences = await this.prisma.userFeaturePreference.findMany({
+      where: { userId },
+      include: {
+        feature: {
+          include: {
+            group: true
+          }
+        }
+      }
+    });
+
+    // If user has any feature preferences, they've completed the survey
+    const hasCompletedSurvey = userPreferences.length > 0;
+    
+    return {
+      hasCompletedSurvey,
+      preferenceCount: userPreferences.length,
+      groups: userPreferences.map(p => p.feature.group.name)
+    };
+  }
+
   async saveSurveyResults(userId: number, surveyResultsDto: SaveSurveyResultsDto) {
     const { primaryCategory, selectedCategories } = surveyResultsDto;
+    
+    console.log('=== SURVEY RESULTS DEBUG ===');
+    console.log('User ID:', userId);
+    console.log('Primary Category:', primaryCategory);
+    console.log('Selected Categories:', selectedCategories);
+
+    // First, ensure we have the necessary groups and features
+    await this.ensureSurveyGroupsExist();
 
     // Get all groups and their features
     const allGroups = await this.prisma.group.findMany({
@@ -86,15 +117,20 @@ export class FeaturesService {
       },
     });
 
+    console.log('All Groups in Database:', allGroups.map(g => ({ id: g.id, name: g.name, featureCount: g.features.length })));
+
     const selectedGroups = allGroups.filter(group => 
       selectedCategories.includes(group.name)
     );
+
+    console.log('Selected Groups:', selectedGroups.map(g => ({ id: g.id, name: g.name, featureCount: g.features.length })));
 
     // Create feature preferences - now much simpler since defaultEnabled is false
     const featurePreferences: { userId: number; featureId: number; isEnabled: boolean }[] = [];
     
     for (const group of allGroups) {
       const isSelectedGroup = selectedCategories.includes(group.name);
+      console.log(`Group "${group.name}" - Is Selected: ${isSelectedGroup}`);
       
       for (const feature of group.features) {
         // Since all features now have defaultEnabled: false, we need to decide
@@ -102,20 +138,11 @@ export class FeaturesService {
         let shouldEnable = false;
         
         if (isSelectedGroup) {
-          // You can customize this logic based on your needs:
-          // Option 1: Enable no features by default (users enable manually)
-          // shouldEnable = false;
-          
-          // Option 2: Enable a few essential features based on naming
-          const featureName = feature.name.toLowerCase();
-          const isEssential = 
-            featureName.includes('basic') || 
-            featureName.includes('core') || 
-            featureName.includes('essential');
-          shouldEnable = isEssential;
-          
-          // Option 3: Enable all features (original behavior - not recommended)
-          // shouldEnable = true;
+          // Enable features for selected groups
+          shouldEnable = true;
+          console.log(`  Feature "${feature.name}" - ENABLED (selected group)`);
+        } else {
+          console.log(`  Feature "${feature.name}" - DISABLED (not selected group)`);
         }
         
         featurePreferences.push({
@@ -126,16 +153,19 @@ export class FeaturesService {
       }
     }
 
+    console.log('Feature Preferences to Create:', featurePreferences);
+
     // Use transaction to ensure all preferences are set together
     await this.prisma.$transaction(async (prisma) => {
       // Remove any existing preferences for this user
-      await prisma.userFeaturePreference.deleteMany({
+      const deletedCount = await prisma.userFeaturePreference.deleteMany({
         where: { userId },
       });
+      console.log(`Deleted ${deletedCount.count} existing preferences for user ${userId}`);
 
       // Create new preferences based on survey results
       for (const preference of featurePreferences) {
-        await prisma.userFeaturePreference.upsert({
+        const result = await prisma.userFeaturePreference.upsert({
           where: {
             userId_featureId: {
               userId: preference.userId,
@@ -145,9 +175,46 @@ export class FeaturesService {
           create: preference,
           update: { isEnabled: preference.isEnabled },
         });
+        console.log(`Created/Updated preference for feature ${preference.featureId}: enabled=${preference.isEnabled}`);
       }
     });
 
+    console.log('=== SURVEY RESULTS SAVED SUCCESSFULLY ===');
     return { success: true, message: 'Survey results saved successfully' };
+  }
+
+  // Helper method to ensure survey groups exist
+  private async ensureSurveyGroupsExist() {
+    const surveyGroups = [
+      { name: 'Wellness', description: 'Health and wellness features' },
+      { name: 'Nutrition & Cooking', description: 'Nutrition tracking and recipe features' },
+      { name: 'Body Transformation', description: 'Workout and fitness tracking features' }
+    ];
+
+    for (const groupData of surveyGroups) {
+      let group = await this.prisma.group.findFirst({
+        where: { name: groupData.name }
+      });
+
+      if (!group) {
+        console.log(`Creating group: ${groupData.name}`);
+        group = await this.prisma.group.create({
+          data: {
+            name: groupData.name,
+            description: groupData.description,
+            features: {
+              create: [
+                { name: `${groupData.name} Basic Feature`, description: 'Basic feature for this category' },
+                { name: `${groupData.name} Advanced Feature`, description: 'Advanced feature for this category' },
+                { name: `${groupData.name} Core Feature`, description: 'Core feature for this category' }
+              ]
+            }
+          }
+        });
+        console.log(`Created group "${group.name}" with features`);
+      } else {
+        console.log(`Group "${group.name}" already exists`);
+      }
+    }
   }
 }

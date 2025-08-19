@@ -43,4 +43,11 @@ export class FeaturesController {
     const userId = req.user.sub;
     return await this.featuresService.saveSurveyResults(userId, surveyResultsDto);
   }
+
+  @Get('survey-status')
+  @HttpCode(HttpStatus.OK)
+  async getSurveyStatus(@Req() req: AuthenticatedRequest) {
+    const userId = req.user.sub;
+    return await this.featuresService.getSurveyStatus(userId);
+  }
 }
