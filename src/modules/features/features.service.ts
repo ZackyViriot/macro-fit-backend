@@ -42,7 +42,7 @@ export class FeaturesService {
         ...feature,
         isEnabled: feature.userPreferences.length > 0
           ? feature.userPreferences[0].isEnabled
-          : false, // Default to false when no user preferences exist
+          : feature.defaultEnabled, // Use feature's defaultEnabled when no user preferences exist
       })),
     }));
   }
@@ -117,13 +117,20 @@ export class FeaturesService {
       },
     });
 
-    console.log('All Groups in Database:', allGroups.map(g => ({ id: g.id, name: g.name, featureCount: g.features.length })));
+    console.log('=== SURVEY DEBUG ===');
+    console.log('User ID:', userId);
+    console.log('Selected categories from survey:', selectedCategories);
+    console.log('Available groups in database:');
+    allGroups.forEach(group => {
+      console.log(`- Group ID ${group.id}: "${group.name}"`);
+    });
 
     const selectedGroups = allGroups.filter(group => 
       selectedCategories.includes(group.name)
     );
 
-    console.log('Selected Groups:', selectedGroups.map(g => ({ id: g.id, name: g.name, featureCount: g.features.length })));
+    console.log('Matched groups:', selectedGroups.map(g => `${g.id}: "${g.name}"`));
+    console.log('==================');
 
     // Create feature preferences - now much simpler since defaultEnabled is false
     const featurePreferences: { userId: number; featureId: number; isEnabled: boolean }[] = [];
@@ -138,11 +145,8 @@ export class FeaturesService {
         let shouldEnable = false;
         
         if (isSelectedGroup) {
-          // Enable features for selected groups
+          // Enable all features for selected groups to ensure users have functionality
           shouldEnable = true;
-          console.log(`  Feature "${feature.name}" - ENABLED (selected group)`);
-        } else {
-          console.log(`  Feature "${feature.name}" - DISABLED (not selected group)`);
         }
         
         featurePreferences.push({
@@ -150,6 +154,8 @@ export class FeaturesService {
           featureId: feature.id,
           isEnabled: shouldEnable,
         });
+
+        console.log(`Feature "${feature.name}" (ID: ${feature.id}) in group "${group.name}": ${shouldEnable ? 'ENABLED' : 'DISABLED'}`);        
       }
     }
 
