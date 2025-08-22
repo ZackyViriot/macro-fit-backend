@@ -1,4 +1,4 @@
-import { IsEmail, IsString, IsOptional, MinLength } from 'class-validator';
+import { IsEmail, IsString, IsOptional, MinLength, IsNumber } from 'class-validator';
 
 export class UpdateUserDto {
   @IsEmail({}, { message: 'Please provide a valid email address' })
@@ -17,4 +17,13 @@ export class UpdateUserDto {
   @IsOptional()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   password?: string;
+
+  // Weight-related fields
+  @IsNumber({}, { message: 'Current weight must be a number' })
+  @IsOptional()
+  currentWeight?: number;
+
+  @IsNumber({}, { message: 'Target weight must be a number' })
+  @IsOptional()
+  targetWeight?: number;
 }

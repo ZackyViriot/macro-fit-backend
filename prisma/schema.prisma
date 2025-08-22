@@ -20,6 +20,9 @@ model User {
   lastName String
   password String
   createdAt DateTime @default(now())
+  currentWeight Float?
+  targetWeight Float?
+
   
   // User's feature preferences
   featurePreferences UserFeaturePreference[]
