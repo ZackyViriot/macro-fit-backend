@@ -42,7 +42,6 @@ export class UsersService {
             },
         });
     }
-    async updateUserWeight(id: number)
 
     async updateUser(id: number, updateUserDto: UpdateUserDto) {
         try {
