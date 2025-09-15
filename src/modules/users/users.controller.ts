@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpStatus, HttpCode, Get, Param, Put, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, HttpStatus, HttpCode, Get, Param, Put, Delete, ParseIntPipe, UseGuards, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -33,5 +33,19 @@ export class UsersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteUser(@Param('id', ParseIntPipe) id: number) {
     return await this.usersService.deleteUser(id);
+  }
+}
+
+@Controller('user')
+export class UserController {
+  constructor(private readonly usersService: UsersService) {}
+
+  @Post('update-weight')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async updateWeight(@Request() req, @Body() updateData: { currentWeight?: number; targetWeight?: number }) {
+    const userId = req.user.sub;
+    const updatedUser = await this.usersService.updateUser(userId, updateData);
+    return updatedUser;
   }
 }

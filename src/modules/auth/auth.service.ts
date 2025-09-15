@@ -46,6 +46,8 @@ export class AuthService {
             last_name: user.lastName,
             email: user.email,
             created_at: user.createdAt,
+            currentWeight: user.currentWeight,
+            targetWeight: user.targetWeight,
         }
 
         return {
@@ -70,6 +72,8 @@ export class AuthService {
                 last_name: user.lastName,
                 email: user.email,
                 created_at: user.createdAt,
+                currentWeight: user.currentWeight,
+                targetWeight: user.targetWeight,
             }
 
             return {
